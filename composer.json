@@ -1,0 +1,17 @@
+{
+    "name": "gerkirill/parallel-processing",
+    "type": "library",
+    "description": "Php library for easy object-oriented parallel processing",
+    "keywords": ["options", "config", "configuration"],
+    "homepage": "https://github.com/gerkirill/ParallelProcessing",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Kirill Gerasimenko",
+            "email": "ger.kirill@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.3"
+    }
+}
