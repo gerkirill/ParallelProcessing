@@ -2,7 +2,7 @@
     "name": "gerkirill/parallel-processing",
     "type": "library",
     "description": "Php library for easy object-oriented parallel processing",
-    "keywords": ["parallel processing"],
+    "keywords": ["parallel processing", "task", "background", "process"],
     "homepage": "https://github.com/gerkirill/ParallelProcessing",
     "license": "MIT",
     "authors": [
@@ -11,6 +11,10 @@
             "email": "ger.kirill@gmail.com"
         }
     ],
+    "autoload": {
+        "psr-0": { "gerkirill\\ParallelProcessing": "" }
+    },
+    "target-dir": "gerkirill/ParallelProcessing",
     "require": {
         "php": ">=5.3.3"
     }
