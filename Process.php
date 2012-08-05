@@ -22,6 +22,10 @@ class Process
 
 	public function __construct($bootstrapPath)
 	{
+		if (!file_exists($bootstrapPath))
+		{
+			throw new \InvalidArgumentException("File $bootstrapPath does not exist");
+		}
 		$this->bootstrapPath = $bootstrapPath;
 	}
 
