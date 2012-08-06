@@ -1,4 +1,5 @@
 <?php
+declare(ticks = 1);
 namespace gerkirill\ParallelProcessing;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
