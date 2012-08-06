@@ -7,7 +7,6 @@ class ProcessManager
 	private $eventDispatcher;
 	private $processes = array();
 	protected $relaxTime = 100;
-	private $lastTickTime;
 	private $concurrencyLimit = 10;
 
 	public function setEventDispatcher(EventDispatcherInterface $dispatcher)
@@ -35,6 +34,7 @@ class ProcessManager
 		foreach($this->processes as $process)
 		{
 			$process->start();
+			$this->triggerEvent('process.started', $process);
 		}
 	}
 
@@ -88,7 +88,6 @@ class ProcessManager
 
 	public function runInBackground()
 	{
-		$this->lastTickTime = $this->getMicrotime();
 		register_tick_function(array(&$this, 'onTick'));
 	}
 
@@ -99,36 +98,19 @@ class ProcessManager
 
 	public function onTick()
 	{
-		$microtime = $this->getMicrotime();
-		if ($microtime - $this->lastTickTime < $this->relaxTime)
-		{
-			return;
-		}
-		$this->lastTickTime = $microtime;
 		$this->syncFinishedProcesses();
+		// re-counts only processes which _really_ run, so if process finished after syncFinishedProcesses -
+		// its process.finished callback may be invoked _after_ new process (which replaces it) started
 		$this->startWithinConcurrencyLimit();
-	}
-
-	private function getMicrotime()
-	{
-		return round(microtime(true)*1000);
 	}
 
 	private function syncFinishedProcesses()
 	{
 		foreach($this->processes as $process)
 		{
-			// autostart unstarted propcesses
-			if (!$process->wasStarted())
+			if ($process->isFinished() && $process->sync())
 			{
-				$process->start();
-			}
-			elseif ($process->isFinished())
-			{
-				if($process->sync())
-				{
-					$this->triggerEvent('process.finished', $process);
-				}
+				$this->triggerEvent('process.finished', $process);
 			}
 		}
 	}
@@ -143,6 +125,7 @@ class ProcessManager
 			if (!$process->wasStarted())
 			{
 				$process->start();
+				$this->triggerEvent('process.started', $process);
 				if (++$running >= $limit) break;
 			}
 		}
