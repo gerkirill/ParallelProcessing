@@ -8,7 +8,9 @@ class ProcessManager
 	private $eventDispatcher;
 	private $processes = array();
 	protected $relaxTime = 100;
-	private $concurrencyLimit = 10;
+	private $concurrencyLimit = 50;
+	private $maxQueueLength =  500;
+	private $exitLoopFlag = false;
 
 	public function __construct()
 	{
@@ -30,9 +32,28 @@ class ProcessManager
 		$this->concurrencyLimit = $limit;
 	}
 
+	public function getMaxQueueLength()
+	{
+		return $this->maxQueueLength;
+	}
+
+	public function setMaxQueueLength($length)
+	{
+		$this->maxQueueLength = $length;
+	}
+
 	public function addProcess($process)
 	{
+		$procCount = count($this->processes);
+		if ($procCount >= $this->maxQueueLength)
+		{
+			throw new OverflowException('Can not add one more process - limit is reached ('.$this->maxQueueLength.')');
+		}
 		$this->processes[] = $process;
+		if (++$procCount == $this->maxQueueLength)
+		{
+			$this->triggerEvent('process_manager.queue_is_full');
+		}
 	}
 
 	public function startAll()
@@ -87,6 +108,48 @@ class ProcessManager
 		// run untill all the processes which were started become finished
 		// and syncronized
 		$this->waitForAll();
+	}
+
+	public function startGraduallyAndWait()
+	{
+		$this->startWithinConcurrencyLimit();
+		$this->waitForAll();
+	}
+
+	public function runInfiniteLoop()
+	{
+		// process_manager.idle +
+		// process_manager.free_slots_available +
+		// process_manager.queue_is_full +
+		// process_manager.iteration +
+		$this->exitLoopFlag = false;
+		do
+		{
+			$this->syncFinishedProcesses();
+			if ($this->allProcessesSyncronized())
+			{
+				$this->triggerEvent('process_manager.idle');
+			}
+			$this->startWithinConcurrencyLimit();
+			$this->triggerEvent('process_manager.iteration');
+			if ($this->countFreeSlots())
+			{
+				$this->triggerEvent('process_manager.free_slots_available');
+			}
+			usleep($this->relaxTime);
+		}
+		while(!$this->exitLoopFlag);
+		$exitLoopFlag = false;
+	}
+
+	public function exitInfiniteLoop()
+	{
+		$this->exitLoopFlag = true;
+	}
+
+	public function countFreeSlots()
+	{
+		return max(0, $this->maxQueueLength - count($this->processes));
 	}
 
 	public function waitForAll()
@@ -182,10 +245,18 @@ class ProcessManager
 		return true;
 	}
 
-	protected function triggerEvent($eventName, $process)
+	protected function triggerEvent($eventName, $process=null)
 	{
 		if (!$this->eventDispatcher) return;
-		$event = new ProcessEvent($process);
+		if (null !== $process)
+		{
+			$event = new ProcessEvent($process, $this);	
+		}
+		else
+		{
+			$event = new ProcessManagerEvent($this);
+		}
+		
 		$this->eventDispatcher->dispatch($eventName, $event);
 	}
 }
