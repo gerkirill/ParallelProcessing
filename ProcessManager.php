@@ -7,10 +7,22 @@ class ProcessManager
 	private $eventDispatcher;
 	private $processes = array();
 	protected $relaxTime = 100;
+	private $lastTickTime;
+	private $concurrencyLimit = 10;
 
 	public function setEventDispatcher(EventDispatcherInterface $dispatcher)
 	{
 		$this->eventDispatcher = $dispatcher;
+	}
+
+	public function getConcurrencyLimit()
+	{
+		return $this->concurrencyLimit;
+	}
+
+	public function setConcurrencyLimit($limit)
+	{
+		$this->concurrencyLimit = $limit;
 	}
 
 	public function addProcess($process)
@@ -60,25 +72,90 @@ class ProcessManager
 		$this->startAll();
 		// run untill all the processes which were started become finished
 		// and syncronized
+		$this->waitForAll();
+	}
+
+	public function waitForAll()
+	{
+		$this->stopInBackground();
 		while(!$this->allProcessesSyncronized())
 		{
-			foreach($this->processes as $process)
-			{
-				// autostart unstarted propcesses
-				if (!$process->wasStarted())
-				{
-					$process->start();
-				}
-				elseif ($process->isFinished())
-				{
-					if($process->sync())
-					{
-						$this->triggerEvent('process.finished', $process);
-					}
-				}
-			}
+			$this->syncFinishedProcesses();
+			$this->startWithinConcurrencyLimit();
 			usleep($this->relaxTime);
 		}
+	}
+
+	public function runInBackground()
+	{
+		$this->lastTickTime = $this->getMicrotime();
+		register_tick_function(array(&$this, 'onTick'));
+	}
+
+	public function stopInBackground()
+	{
+		unregister_tick_function(array(&$this, 'onTick'));
+	}
+
+	public function onTick()
+	{
+		$microtime = $this->getMicrotime();
+		if ($microtime - $this->lastTickTime < $this->relaxTime)
+		{
+			return;
+		}
+		$this->lastTickTime = $microtime;
+		$this->syncFinishedProcesses();
+		$this->startWithinConcurrencyLimit();
+	}
+
+	private function getMicrotime()
+	{
+		return round(microtime(true)*1000);
+	}
+
+	private function syncFinishedProcesses()
+	{
+		foreach($this->processes as $process)
+		{
+			// autostart unstarted propcesses
+			if (!$process->wasStarted())
+			{
+				$process->start();
+			}
+			elseif ($process->isFinished())
+			{
+				if($process->sync())
+				{
+					$this->triggerEvent('process.finished', $process);
+				}
+			}
+		}
+	}
+
+	private function startWithinConcurrencyLimit()
+	{
+		$limit = $this->concurrencyLimit;
+		$running = $this->countRunningProcesses();
+		if ($running >= $limit) return;
+		foreach ($this->processes as $process)
+		{
+			if (!$process->wasStarted())
+			{
+				$process->start();
+				if (++$running >= $limit) break;
+			}
+		}
+	}
+
+	public function countRunningProcesses()
+	{
+		$running = 0;
+		foreach($this->processes as $process)
+		{
+			if ($process->isRunning()) $running++;
+		}
+		return $running;
 	}
 
 	private function allProcessesSyncronized()
