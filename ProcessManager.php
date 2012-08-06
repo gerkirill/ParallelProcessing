@@ -9,6 +9,11 @@ class ProcessManager
 	protected $relaxTime = 100;
 	private $concurrencyLimit = 10;
 
+	public function __construct()
+	{
+		$this->registerSigintHandler();
+	}
+
 	public function setEventDispatcher(EventDispatcherInterface $dispatcher)
 	{
 		$this->eventDispatcher = $dispatcher;
@@ -35,6 +40,14 @@ class ProcessManager
 		{
 			$process->start();
 			$this->triggerEvent('process.started', $process);
+		}
+	}
+
+	public function terminateAll()
+	{
+		foreach($this->processes as $process)
+		{
+			$this->terminateProcess($process);
 		}
 	}
 
@@ -88,12 +101,12 @@ class ProcessManager
 
 	public function runInBackground()
 	{
-		register_tick_function(array(&$this, 'onTick'));
+		register_tick_function(array($this, 'onTick'));
 	}
 
 	public function stopInBackground()
 	{
-		unregister_tick_function(array(&$this, 'onTick'));
+		unregister_tick_function(array($this, 'onTick'));
 	}
 
 	public function onTick()
@@ -113,6 +126,21 @@ class ProcessManager
 				$this->triggerEvent('process.finished', $process);
 			}
 		}
+	}
+
+	public function sigintHandler($signal)
+	{
+		if (SIGINT === $signal)
+		{
+			$this->terminateAll();
+			exit;
+		}
+	}
+
+	private function registerSigintHandler()
+	{
+		if (!function_exists('pcntl_signal')) return;
+		pcntl_signal(SIGINT, array($this, 'sigintHandler'));
 	}
 
 	private function startWithinConcurrencyLimit()
