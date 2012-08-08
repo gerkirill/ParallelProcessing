@@ -116,12 +116,12 @@ class ProcessManager
 		$this->waitForAll();
 	}
 
-	public function runInfiniteLoop()
+	public function startInfiniteLoop()
 	{
 		// process_manager.idle +
 		// process_manager.free_slots_available +
 		// process_manager.queue_is_full +
-		// process_manager.iteration +
+		// process_manager.iteration +startInfiniteLoop
 		$this->exitLoopFlag = false;
 		do
 		{
@@ -140,9 +140,10 @@ class ProcessManager
 		}
 		while(!$this->exitLoopFlag);
 		$exitLoopFlag = false;
+		$this->waitForAll();
 	}
 
-	public function exitInfiniteLoop()
+	public function stopInfiniteLoop()
 	{
 		$this->exitLoopFlag = true;
 	}
