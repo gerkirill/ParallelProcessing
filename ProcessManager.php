@@ -47,7 +47,7 @@ class ProcessManager
 		$procCount = count($this->processes);
 		if ($procCount >= $this->maxQueueLength)
 		{
-			throw new OverflowException('Can not add one more process - limit is reached ('.$this->maxQueueLength.')');
+			throw new \OverflowException('Can not add one more process - limit is reached ('.$this->maxQueueLength.')');
 		}
 		$this->processes[] = $process;
 		if (++$procCount == $this->maxQueueLength)
