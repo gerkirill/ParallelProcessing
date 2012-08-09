@@ -31,6 +31,7 @@ class Process
 
 	private $synced = false;
 	private $started = false;
+	private $terminated = false;
 
 	/**
 	* @param string $boostrapPath path to the php script which will be started in the separate process.
@@ -151,13 +152,18 @@ class Process
 		return !$status['running'];
 	}
 
+	public function wasTerminated()
+	{
+		return $this->terminated;
+	}
+
 	// todo: maybe some flag to distinguish between normally finished and terminated ?
 	public function terminate()
 	{
-		if (!$this->isFinished())
+		if ($this->isRunning())
 		{
 			proc_terminate($this->processHandle);
-			$this->processHandle = null;
+			$this->terminated = true;
 		}
 	}
 

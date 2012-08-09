@@ -80,6 +80,7 @@ class ProcessManager
 		{
 			usleep($this->relaxTime);
 		}
+		// cleanup tmp files, etc
 		$process->sync();
 		$this->triggerEvent('process.finished', $process);
 	}
