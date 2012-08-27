@@ -128,22 +128,60 @@ class Process
 		return true;
 	}
 
+	/**
+	 * Allows to get task object from the different process
+	 * @static
+	 * @return TaskInterface
+	 */
+	public static function getTaskFromProcess()
+	{
+		$taskFile = $GLOBALS['argv'][1];
+		$task = unserialize(file_get_contents($taskFile));
+		return $task;
+	}
 
+	/**
+	 * Allows to update task state from the different process
+	 * @static
+	 * @param TaskInterface $task
+	 */
+	public static function updateTaskFromProcess($task)
+	{
+		$taskFile = $GLOBALS['argv'][1];
+		file_put_contents($taskFile, serialize($task));
+	}
+
+	/**
+	 * Allows to check if the process was syncronized
+	 * @return bool true if syncronized, false otherwise
+	 */
 	public function wasSyncronized()
 	{
 		return $this->synced;
 	}
 
+	/**
+	 * Allows to check if the process was started
+	 * @return bool true if it was started, false otherwise
+	 */
 	public function wasStarted()
 	{
 		return $this->started;
 	}
 
+	/**
+	 * Allows to check if the process is running right now
+	 * @return bool true if process is now running, false otherwise
+	 */
 	public function isRunning()
 	{
 		return $this->wasStarted() && ! $this->isFinished();
 	}
 
+	/**
+	 * Allows to check if the process is finished
+	 * @return bool true if it is finished, false otherwise
+	 */
 	public function isFinished()
 	{
 		if (!$this->started) return false;
@@ -152,12 +190,18 @@ class Process
 		return !$status['running'];
 	}
 
+	/**
+	 * Allows to check if the process was terminated
+	 * @return bool true if the process was terminated, false otherwise
+	 */
 	public function wasTerminated()
 	{
 		return $this->terminated;
 	}
 
-	// todo: maybe some flag to distinguish between normally finished and terminated ?
+	/**
+	 * Send terminate signal to the running process
+	 */
 	public function terminate()
 	{
 		if ($this->isRunning())
@@ -167,43 +211,46 @@ class Process
 		}
 	}
 
+	/**
+	 * Returns task assigned to the process
+	 * @return TaskInterface
+	 */
 	public function getTask()
 	{
 		return $this->task;
 	}
 
+	/**
+	 * Returns process standard output
+	 * @return string
+	 */
 	public function getOutput()
 	{
 		return $this->output;
 	}
 
+	/**
+	 * Returns process error output
+	 * @return string
+	 */
 	public function getError()
 	{
 		return $this->error;
 	}
 
+	/**
+	 * Returns process exit code
+	 * @return int
+	 */
 	public function getExitCode()
 	{
 		return $this->exitCode;
 	}
 
-	public static function getTaskFromProcess()
-	{
-		$taskFile = $GLOBALS['argv'][1];
-		$task = unserialize(file_get_contents($taskFile));
-		return $task;
-	}
-
-	public static function updateTaskFromProcess($task)
-	{
-		$taskFile = $GLOBALS['argv'][1];
-		file_put_contents($taskFile, serialize($task));
-	}
-
 	/**
-	* Tries to find out path to the php executable in a few ways
-	* @return string path to php executable  
-	*/
+	 * Tries to find out path to the php executable in a few ways
+	 * @return string path to php executable
+	 */
 	private function getPhpPath()
 	{
 		if (!is_executable($this->phpPath))
@@ -231,8 +278,8 @@ class Process
 	}
 
 	/**
-	* Generates files required to communicate with started process (catch its stdout, stderr and return code)
-	*/
+	 * Generates files required to communicate with started process (catch its stdout, stderr and return code)
+	 */
 	private function generateOutputFiles()
 	{
 		$tmpDir = sys_get_temp_dir();
